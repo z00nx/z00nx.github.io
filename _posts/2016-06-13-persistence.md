@@ -7,7 +7,7 @@ tags: [boot2root, vulnhub]
 ---
 Initial recon shows that only one port is open with a web server running
 
-{% highlight bash %}
+{% highlight console %}
 root@kali:~# netdiscover -i eth0
 Currently scanning: 192.168.70.0/16   |   Screen View: Unique Hosts
 
@@ -46,7 +46,7 @@ root@kali:~# nikto -h 192.168.2.105 -C all
 {% endhighlight %}
 Browsing to the page we find a web page which allows us to ping an inputted IP address. <img src="{{site.url}}/assets/debug_php.png">
 I was able to verify that the ping command was working by running a packet capture when I submitted my query
-{% highlight bash %}
+{% highlight console %}
 root@kali:~# tcpdump -i eth0 'icmp'
 tcpdump: verbose output suppressed, use -v or -vv for full protocol decode
 listening on eth0, link-type EN10MB (Ethernet), capture size 262144 bytes
@@ -83,7 +83,7 @@ while True:
             sys.stdout.write(packet.getlayer(ICMP).load[8])
 {% endhighlight %}
 The script will output your command output similar to the following.
-{% highlight python %}
+{% highlight console %}
 root@kali:~# ./persistence-ping-decode.py
 WARNING: No route found for IPv6 destination :: (no default route?)
 uid=498(nginx) gid=498(nginx) groups=498(nginx)
@@ -101,7 +101,7 @@ It also appeared that there was a local firewall dropping traffic.
 I ended up downloading the interesting looking 'sysadmin-tool' binary which was being hosted and started investigating.
 What was interesting is that that binary has the SUID bit set.
 I ran strings against the binary which revealed the following interesting strings:
-{% highlight bash %}
+{% highlight console %}
 Usage: sysadmin-tool --activate-service
 --activate-service
 breakout
@@ -113,14 +113,14 @@ Use avida:dollars to access.
 {% endhighlight %}
 It appears that the binary will disable the local firewall and provide login credentials.
 I proceeded to run the binary and expected it disabled the local firewall and provided provided login credentials.
-{% highlight bash %}
+{% highlight console %}
 root@kali:~# ./persistence-ping-decode.py
 WARNING: No route found for IPv6 destination :: (no default route?)
 Service started...
 Use avida:dollars to access.
 {% endhighlight %}
 After a quick port scan, we see that SSH is now open. If you SSH in using the provided credentials you'll be dropped into a rbash shell.
-{% highlight bash %}
+{% highlight console %}
 root@kali:~# unicornscan -I -mT 192.168.2.105:a;unicornscan -I -mU 192.168.2.105:a
 TCP open 192.168.2.105:80  ttl 64
 TCP open 192.168.2.105:22  ttl 64
@@ -128,7 +128,7 @@ TCP open                     ssh[   22]         from 192.168.2.105  ttl 64
 TCP open                    http[   80]         from 192.168.2.105  ttl 64
 {% endhighlight %}
 Looking around you can see there is a custom program named "wopr" running as root.
-{% highlight bash %}
+{% highlight console %}
 -rbash-4.1$ ps aux | grep wopr
 root      1092  0.0  0.0   2004   408 ?        S    05:54   0:00 /usr/local/bin/wopr
 avida     2149  0.0  0.0   4356   732 pts/0    S+   06:48   0:00 grep wopr
