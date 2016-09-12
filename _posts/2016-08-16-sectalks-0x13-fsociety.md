@@ -13,7 +13,7 @@ fsociety: ELF 32-bit LSB executable, Intel 80386, version 1 (SYSV), dynamically 
 ```
 Running strings on the executable we see a couple of things:
 
-* The binary may start spawn a shell
+* The binary start spawn a shell
 * There is a false flag stored in the binary (The correct flag should be in the "hack.Sydney{}" format)
 * There is a quote from the series Mr Robot
 * There is some more text
@@ -96,4 +96,5 @@ exit(-1 <no return ...>
 +++ exited (status 255) +++
 ```
 It looks like we've passed the first challenge by inputting "b4ckd00r" but immediately after it's prompting us for more input.
+
 # TODO: Complete second challenge
