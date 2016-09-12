@@ -69,6 +69,7 @@ root@kali:~/sectalks# objdump -M intel -D purplekey
 ---8<---
 ```
 Now that we know the address of the comparision, let's generate an input file to test.
+
 ```
 root@kali:~/sectalks# echo 'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA' > input
 root@kali:~/sectalks# gdb -q purplekey
