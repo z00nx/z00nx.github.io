@@ -13,7 +13,7 @@ fsociety: ELF 32-bit LSB executable, Intel 80386, version 1 (SYSV), dynamically 
 ```
 Running strings on the executable we see a couple of things:
 
-* The binary start spawn a shell
+* The binary can likely spawn a shell
 * There is a false flag stored in the binary (The correct flag should be in the "hack.Sydney{}" format)
 * There is a quote from the series Mr Robot
 * There is some more text
