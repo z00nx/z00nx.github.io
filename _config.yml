@@ -7,12 +7,13 @@
 
 # Site settings
 title: Rambling of an infosec enthusiast
-email: z00nx(at)gmail.com
+email: z00nx0(at)gmail.com
 description: Rambling of an infosec enthusiast
 baseurl: https://z00nx.github.io
 url: https://z00nx.github.io
 twitter_username: z00nx
 github_username: z00nx
+keybase_username: z00nx
 
 # Build settings
 markdown: kramdown
