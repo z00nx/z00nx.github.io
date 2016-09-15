@@ -137,3 +137,613 @@ Running a port scan against the necromancer machine confirms that TCP port 80 is
 root@kali:~# unicornscan -mT -I 192.168.56.101:a;unicornscan -mU -I 192.168.56.101:a
 TCP open 192.168.56.101:80  ttl 64
 ```
+
+Nikto does not turn up anything interesting.
+
+```
+root@kali:~# nikto -h 192.168.56.101 -C all
+- Nikto v2.1.6
+---------------------------------------------------------------------------
++ Target IP:          192.168.56.101
++ Target Hostname:    test
++ Target Port:        80
++ Start Time:         2016-09-15 08:17:28 (GMT-4)
+---------------------------------------------------------------------------
++ Server: OpenBSD httpd
++ The anti-clickjacking X-Frame-Options header is not present.
++ 22333 requests: 0 error(s) and 1 item(s) reported on remote host
++ End Time:           2016-09-15 08:19:03 (GMT-4) (95 seconds)
+---------------------------------------------------------------------------
++ 1 host(s) tested
+```
+
+Browsing to the web server we see more text and a linked image.
+
+<img src="{{site.url}}/assets/necromancer-1.png">
+
+There is nothing interesting in the page source, in the pics directory nor the robots.txt.
+
+```
+root@kali:~# curl 192.168.56.101
+<html>
+  <head>
+    <title>The Chasm</title>
+  </head>
+  <body bgcolor="#000000" link="green" vlink="green" alink="green">
+    <font color="green">
+    Hours have passed since you first started to follow the crows.<br><br>
+    Silence continues to engulf you as you treck towards a mountain range on the horizon.<br><br>
+    More times passes and you are now standing in front of a great chasm.<br><br>
+    Across the chasm you can see a necromancer standing in the mouth of a cave, staring skyward at the circling crows.<br><br>
+    As you step closer to the chasm, a rock dislodges from beneath your feet and falls into the dark depths.<br><br>
+    The necromancer looks towards you with hollow eyes which can only be described as death.<br><br>
+    He smirks in your direction, and suddenly a bright light momentarily blinds you.<br><br>
+    The silence is broken by a blood curdling screech of a thousand birds, followed by the necromancers laughs fading as he decends into the cave!<br><br>
+    The crows break their formation, some flying aimlessly in the air; others now motionless upon the ground.<br><br>
+    The cave is now protected by a gaseous blue haze, and an organised pile of feathers lay before you.<br><br>
+    <img src="/pics/pileoffeathers.jpg">
+    <p><font size=2>Image copyright: <a href="http://www.featherfolio.com/" target=_blank>Chris Maynard</a></font></p>
+    </font>
+  </body>
+</html>
+root@kali:~# curl 192.168.56.101/pics
+<!DOCTYPE html>
+<html>
+<head>
+<title>301 Moved Permanently</title>
+<style type="text/css"><!--
+body { background-color: white; color: black; font-family: 'Comic Sans MS', 'Chalkboard SE', 'Comic Neue', sans-serif; }
+hr { border: 0; border-bottom: 1px dashed; }
+
+--></style>
+</head>
+<body>
+<h1>301 Moved Permanently</h1>
+<hr>
+<address>OpenBSD httpd</address>
+</body>
+</html>
+root@kali:~# curl 192.168.56.101/robots.txt
+<!DOCTYPE html>
+<html>
+<head>
+<title>404 Not Found</title>
+<style type="text/css"><!--
+body { background-color: white; color: black; font-family: 'Comic Sans MS', 'Chalkboard SE', 'Comic Neue', sans-serif; }
+hr { border: 0; border-bottom: 1px dashed; }
+
+--></style>
+</head>
+<body>
+<h1>404 Not Found</h1>
+<hr>
+<address>OpenBSD httpd</address>
+</body>
+</html>
+```
+
+Running a directory bruteforce does not turn up anything interesting.
+
+```
+root@kali:~/dirsearch# ./dirsearch.py -u http://192.168.56.101/ -e htm,html,jpg
+
+ _|. _ _  _  _  _ _|_    v0.3.7
+(_||| _) (/_(_|| (_| )
+
+Extensions: htm, html, jpg | Threads: 10 | Wordlist size: 5931
+
+Error Log: /root/dirsearch/logs/errors-16-09-15_08-23-00.log
+
+Target: http://192.168.56.101/
+
+[08:23:00] Starting: 
+[08:23:05] 200 -    1KB - /index.html
+[08:23:05] 200 -    1KB - /index.html
+[08:23:07] 301 -  374B  - /pics  ->  http://192.168.56.101/pics/
+
+Task Completed
+```
+
+Running binwalk over the image does however turn up a hidden zip file appended to the end of the image
+
+```
+root@kali:~# curl -O http://192.168.56.101/pics/pileoffeathers.jpg
+  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
+                                 Dload  Upload   Total   Spent    Left  Speed
+100 37289  100 37289    0     0  6589k      0 --:--:-- --:--:-- --:--:-- 7283k
+root@kali:~# binwalk -e pileoffeathers.jpg 
+
+DECIMAL       HEXADECIMAL     DESCRIPTION
+--------------------------------------------------------------------------------
+0             0x0             JPEG image data, EXIF standard
+12            0xC             TIFF image data, little-endian
+36994         0x9082          Zip archive data, at least v2.0 to extract, compressed size: 121,  uncompressed size: 125, name: "feathers.txt"
+37267         0x9193          End of Zip archive
+```
+
+Inside the zip file is a text file which contains a base64 encoded string. Decoding the string reveals the next flag which is **flag3{9ad3f62db7b91c28b68137000394639f}** and the next challenge.
+
+```
+root@kali:~# cat _pileoffeathers.jpg.extracted/feathers.txt 
+ZmxhZzN7OWFkM2Y2MmRiN2I5MWMyOGI2ODEzNzAwMDM5NDYzOWZ9IC0gQ3Jvc3MgdGhlIGNoYXNtIGF0IC9hbWFnaWNicmlkZ2VhcHBlYXJzYXR0aGVjaGFzbQ==
+root@kali:~# cat _pileoffeathers.jpg.extracted/feathers.txt | base64 -d
+flag3{9ad3f62db7b91c28b68137000394639f} - Cross the chasm at /amagicbridgeappearsatthechasm
+```
+
+The next page is more text and an image.
+
+<img src="{{site.url}}/assets/necromancer-2.png">
+
+Viewing the page source does not return anything. There is nothing hidden in the images metadata nor inside the image.
+
+```
+root@kali:~# curl http://192.168.56.101/amagicbridgeappearsatthechasm/
+<html>
+  <head>
+    <title>The Cave</title>
+  </head>
+  <body bgcolor="#000000" link="green" vlink="green" alink="green">
+    <font color="green">
+    You cautiously make your way across chasm.<br><br>
+    You are standing on a snow covered plateau, surrounded by shear cliffs of ice and stone.<br><br>
+    The cave before you is protected by some sort of spell cast by the necromancer.<br><br>
+    You reach out to touch the gaseous blue haze, and can feel life being drawn from your soul the closer you get.<br><br>
+    Hastily you take a few steps back away from the cave entrance.<br><br>
+    There must be a magical item that could protect you from the necromancer's spell.<br><br>
+    <img src="../pics/magicbook.jpg">
+    </font>
+  </body>
+</html>
+root@kali:~# curl -O http://192.168.56.101/pics/magicbook.jpg
+  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
+                                 Dload  Upload   Total   Spent    Left  Speed
+100  154k  100  154k    0     0  23.3M      0 --:--:-- --:--:-- --:--:-- 30.1M
+root@kali:~# exiftool magicbook.jpg 
+ExifTool Version Number         : 8.60
+File Name                       : magicbook.jpg
+Directory                       : .
+File Size                       : 154 kB
+File Modification Date/Time     : 2016:05:09 07:53:24-04:00
+File Permissions                : rw-r--r--
+File Type                       : JPEG
+MIME Type                       : image/jpeg
+JFIF Version                    : 1.01
+Resolution Unit                 : None
+X Resolution                    : 1
+Y Resolution                    : 1
+Image Width                     : 600
+Image Height                    : 450
+Encoding Process                : Baseline DCT, Huffman coding
+Bits Per Sample                 : 8
+Color Components                : 3
+Y Cb Cr Sub Sampling            : YCbCr4:2:0 (2 2)
+Image Size                      : 600x450
+root@kali:~# binwalk magicbook.jpg 
+
+DECIMAL       HEXADECIMAL     DESCRIPTION
+--------------------------------------------------------------------------------
+0             0x0             JPEG image data, JFIF standard  1.01
+```
+
+With no leads I started bruteforcing the new directory which turned up an executable named 'talisman'.
+
+```
+root@kali:~/dirsearch# ./dirsearch.py -u http://192.168.56.101/amagicbridgeappearsatthechasm/ -e htm,html,jpg -w /usr/share/dirbuster/wordlists/directory-list-2.3-medium.txt 
+
+ _|. _ _  _  _  _ _|_    v0.3.7
+(_||| _) (/_(_|| (_| )
+
+Extensions: htm, html, jpg | Threads: 10 | Wordlist size: 220547
+
+Error Log: /root/dirsearch/logs/errors-16-09-15_08-31-26.log
+
+Target: http://192.168.56.101/amagicbridgeappearsatthechasm/
+
+[08:31:26] Starting: 
+[08:31:26] 200 -  755B  - /amagicbridgeappearsatthechasm/
+[08:33:22] 200 -    9KB - /amagicbridgeappearsatthechasm/talisman
+[08:35:02] 200 -  755B  - /amagicbridgeappearsatthechasm/
+
+Task Completed
+root@kali:~# curl -O http://192.168.56.101/amagicbridgeappearsatthechasm/talisman
+  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
+                                 Dload  Upload   Total   Spent    Left  Speed
+100  9676  100  9676    0     0  1771k      0 --:--:-- --:--:-- --:--:-- 2362k
+root@kali:~# file talisman 
+talisman: ELF 32-bit LSB executable, Intel 80386, version 1 (SYSV), dynamically linked (uses shared libs), for GNU/Linux 2.6.32, BuildID[sha1]=0xf91d132bdf7a0806ba8c3f16d2b367199d636e76, not stripped
+```
+
+Running strings on the binary didn't give any clue as to what it does besides printing something.
+
+```
+root@kali:~# strings talisman 
+/lib/ld-linux.so.2
+libc.so.6
+_IO_stdin_used
+__isoc99_scanf
+printf
+__libc_start_main
+__gmon_start__
+GLIBC_2.7
+GLIBC_2.0
+PTRh
+UWVS
+t$,U
+[^_]
+;*2$"
+```
+
+Continuing with static analysis I fired up radare2 to analyse the binary. My findings have been added to the disassembly.
+
+```
+root@kali:~# radare2 talisman 
+[0x08048350]> aaa
+[0x08048350]> afl ; list all functions
+0x08048310     16   0  imp.printf
+0x08048000     16   0  imp.__gmon_start__
+0x08048320     16   0  imp.__libc_start_main
+0x08048330     16   0  imp.__isoc99_scanf
+0x08048a13     36   1  sym.main
+0x08048529   1258   1  sym.wearTalisman ; interesting looking function name
+0x080484f4     53   1  sym.myPrintf ; custom print function
+0x0804844b     82   4  sym.unhide ; something is being unhidden
+0x08048499      4   1  loc.08048499
+0x08048458     69   3  loc.08048458
+0x0804849d     87   4  sym.hide ; something is being hidden
+0x080484f0      4   1  loc.080484f0
+0x080484aa     74   3  loc.080484aa
+0x08048350     34   1  section..text
+0x08048390     43   4  sym.deregister_tm_clones
+0x080483b9      2   1  loc.080483b9
+0x080483c0     53   4  sym.register_tm_clones
+0x080483f3      2   1  loc.080483f3
+0x08048400     30   3  sym.__do_global_dtors_aux
+0x0804841c      2   1  loc.0804841c
+0x08048420    125   8  sym.frame_dummy
+0x08048430    109   7  loc.08048430
+0x0804842b    114   5  loc.0804842b
+0x08049590      2   1  sym.__libc_csu_fini
+0x08048380      4   1  sym.__x86.get_pc_thunk.bx
+0x08048a37   2795   1  sym.chantToBreakSpell ; another interesting looking function name
+0x08049594     20   1  section..fini
+0x08049530     93   4  sym.__libc_csu_init
+0x080482d0     35   3  section..init
+0x080482ee      5   1  loc.080482ee
+0x08048340     50   1  section..plt.got
+0x08049585      8   1  loc.08049585
+0x08049568     37   2  loc.08049568
+[0x08048350]> pdf @ sym.main ; disassemble the main function
+/ function: sym.main (36)
+|     0x08048a13  sym.main:
+|     0x08048a13     8d4c2404         lea ecx, [esp+0x4]
+|     0x08048a17     83e4f0           and esp, 0xfffffff0
+|     0x08048a1a     ff71fc           push dword [ecx-0x4]
+|     0x08048a1d     55               push ebp
+|     0x08048a1e     89e5             mov ebp, esp
+|     0x08048a20     51               push ecx
+|     0x08048a21     83ec04           sub esp, 0x4
+|     0x08048a24     e800fbffff       call dword sym.wearTalisman ; call the wearTalisman function
+|        ; sym.wearTalisman()
+|     0x08048a29     b800000000       mov eax, 0x0
+|     0x08048a2e     83c404           add esp, 0x4
+|     0x08048a31     59               pop ecx
+|     0x08048a32     5d               pop ebp
+|     0x08048a33     8d61fc           lea esp, [ecx-0x4]
+\     0x08048a36     c3               ret
+      ; ------------
+[0x08048350]> pdf @ sym.wearTalisman
+      ; CODE (CALL) XREF 0x08048a24 (sym.main)
+/ function: sym.wearTalisman (1258)
+|     0x08048529  sym.wearTalisman:
+|     0x08048529     55               push ebp
+|     0x0804852a     89e5             mov ebp, esp
+|     0x0804852c     57               push edi
+|     0x0804852d     81ecb4010000     sub esp, 0x1b4
+|     0x08048533     8d9554feffff     lea edx, [ebp+0xfffffe54]
+|     0x08048539     b800000000       mov eax, 0x0
+|     0x0804853e     b964000000       mov ecx, 0x64
+|     0x08048543     89d7             mov edi, edx
+|     0x08048545     f3ab             rep stosd
+|     0x08048547     c68554feffffec   mov byte [ebp+0xfffffe54], 0xec ; load the first blob into memory
+|     0x0804854e     c68555feffff9d   mov byte [ebp+0xfffffe55], 0x9d
+|     0x08048555     c68556feffff49   mov byte [ebp+0xfffffe56], 0x49
+---8<---
+|     0x08048937     c6853dffffffd2   mov byte [ebp+0xffffff3d], 0xd2
+|     0x0804893e     c6853effffff1c   mov byte [ebp+0xffffff3e], 0x1c
+|     0x08048945     c6853fffffffa1   mov byte [ebp+0xffffff3f], 0xa1
+|     0x0804894c     c64580bf         mov byte [ebp-0x80], 0xbf ; load the second blob into memory
+|     0x08048950     c64581bc         mov byte [ebp-0x7f], 0xbc
+|     0x08048954     c6458253         mov byte [ebp-0x7e], 0x53
+---8<---
+|     0x08048998     c64593ab         mov byte [ebp-0x6d], 0xab
+|     0x0804899c     c64594bf         mov byte [ebp-0x6c], 0xbf
+|     0x080489a0     c64595f2         mov byte [ebp-0x6b], 0xf2
+|     0x080489a4     83ec0c           sub esp, 0xc
+|     0x080489a7     8d8554feffff     lea eax, [ebp+0xfffffe54]
+|     0x080489ad     50               push eax
+|     0x080489ae     e841fbffff       call dword sym.myPrintf ; call it's custom print function
+|        ; sym.myPrintf(unk)
+|     0x080489b3     83c410           add esp, 0x10
+|     0x080489b6     83ec0c           sub esp, 0xc
+|     0x080489b9     8d8554feffff     lea eax, [ebp+0xfffffe54]
+|     0x080489bf     83c064           add eax, 0x64
+|     0x080489c2     50               push eax
+|     0x080489c3     e82cfbffff       call dword sym.myPrintf ; call the print function again
+|        ; sym.myPrintf(unk)
+|     0x080489c8     83c410           add esp, 0x10
+|     0x080489cb     83ec0c           sub esp, 0xc
+|     0x080489ce     8d8554feffff     lea eax, [ebp+0xfffffe54]
+|     0x080489d4     05c8000000       add eax, 0xc8
+|     0x080489d9     50               push eax
+|     0x080489da     e815fbffff       call dword sym.myPrintf ; call the print function again
+|        ; sym.myPrintf(unk)
+|     0x080489df     83c410           add esp, 0x10
+|     0x080489e2     83ec08           sub esp, 0x8
+|     0x080489e5     8d45e4           lea eax, [ebp-0x1c]
+|     0x080489e8     50               push eax
+|     0x080489e9     68b0950408       push dword 0x80495b0
+|     0x080489ee     e83df9ffff       call dword imp.__isoc99_scanf ; get input from the user
+|        ; imp.__isoc99_scanf()
+|     0x080489f3     83c410           add esp, 0x10
+|     0x080489f6     83ec0c           sub esp, 0xc
+|     0x080489f9     8d8554feffff     lea eax, [ebp+0xfffffe54]
+|     0x080489ff     052c010000       add eax, 0x12c
+|     0x08048a04     50               push eax
+|     0x08048a05     e8eafaffff       call dword sym.myPrintf ; call the print function again
+|        ; sym.myPrintf(unk)
+|     0x08048a0a     83c410           add esp, 0x10
+|     0x08048a0d     90               nop
+|     0x08048a0e     8b7dfc           mov edi, [ebp-0x4]
+|     0x08048a11     c9               leave
+\     0x08048a12     c3               ret
+      ; ------------
+[0x08048350]> pdf @ sym.myPrintf ; disassemble the custom print function
+       ; CODE (CALL) XREF 0x080489ae (sym.wearTalisman)
+       ; CODE (CALL) XREF 0x080489c3 (sym.wearTalisman)
+       ; CODE (CALL) XREF 0x080489da (sym.wearTalisman)
+       ; CODE (CALL) XREF 0x08048a05 (sym.wearTalisman)
+       ; CODE (CALL) XREF 0x0804947a (sym.chantToBreakSpell)
+       ; CODE (CALL) XREF 0x0804948f (sym.chantToBreakSpell)
+       ; CODE (CALL) XREF 0x080494a6 (sym.chantToBreakSpell)
+       ; CODE (CALL) XREF 0x080494bd (sym.chantToBreakSpell)
+       ; CODE (CALL) XREF 0x080494d4 (sym.chantToBreakSpell)
+       ; CODE (CALL) XREF 0x080494eb (sym.chantToBreakSpell)
+       ; CODE (CALL) XREF 0x08049502 (sym.chantToBreakSpell)
+       ; CODE (CALL) XREF 0x08049514 (sym.chantToBreakSpell)
+/ function: sym.myPrintf (53)
+|      0x080484f4  sym.myPrintf:
+|      0x080484f4     55               push ebp
+|      0x080484f5     89e5             mov ebp, esp
+|      0x080484f7     83ec08           sub esp, 0x8
+|      0x080484fa     ff7508           push dword [ebp+0x8]
+|      0x080484fd     e849ffffff       call dword sym.unhide
+|         ; sym.unhide(unk) ; the binary has a unhide function which will probably decode the loaded blobs
+|      0x08048502     83c404           add esp, 0x4
+|      0x08048505     83ec08           sub esp, 0x8
+|      0x08048508     ff7508           push dword [ebp+0x8]
+|      0x0804850b     68b0950408       push dword 0x80495b0
+|      0x08048510     e8fbfdffff       call dword imp.printf
+|         ; imp.printf() ; print the decoded string
+|      0x08048515     83c410           add esp, 0x10
+|      0x08048518     83ec0c           sub esp, 0xc
+|      0x0804851b     ff7508           push dword [ebp+0x8]
+|      0x0804851e     e87affffff       call dword sym.hide
+|         ; sym.hide(unk) ; rehide the decoded blob
+|      0x08048523     83c410           add esp, 0x10
+|      0x08048526     90               nop
+|      0x08048527     c9               leave
+\      0x08048528     c3               ret
+       ; ------------
+[0x08048350]> pdf @ sym.unhide ; disassemble the unhide function
+       ; CODE (CALL) XREF 0x080484fd (sym.myPrintf)
+/ function: sym.unhide (82)
+|      0x0804844b  sym.unhide:
+|      0x0804844b     55               push ebp
+|      0x0804844c     89e5             mov ebp, esp
+|      0x0804844e     83ec10           sub esp, 0x10
+|      0x08048451     c745fc00000000   mov dword [ebp-0x4], 0x0
+|      ; CODE (JMP) XREF 0x08048497 (sym.unhide)
+/ loc: loc.08048458 (69)
+|      0x08048458  loc.08048458:
+|      0x08048458     8b45fc           mov eax, [ebp-0x4]
+|      0x0804845b     99               cdq
+|      0x0804845c     c1ea1e           shr edx, 0x1e
+|      0x0804845f     01d0             add eax, edx
+|      0x08048461     83e003           and eax, 0x3
+|      0x08048464     29d0             sub eax, edx
+|      0x08048466     c1e003           shl eax, 0x3
+|      0x08048469     bab5f23ca1       mov edx, 0xa13cf2b5
+|      0x0804846e     89c1             mov ecx, eax
+|      0x08048470     d3ea             shr edx, cl
+|      0x08048472     89d0             mov eax, edx
+|      0x08048474     89c2             mov edx, eax
+|      0x08048476     8b4508           mov eax, [ebp+0x8]
+|      0x08048479     0fb600           movzx eax, byte [eax]
+|      0x0804847c     31d0             xor eax, edx
+|      0x0804847e     89c2             mov edx, eax
+|      0x08048480     8b4508           mov eax, [ebp+0x8]
+|      0x08048483     8810             mov [eax], dl
+|      0x08048485     8345fc01         add dword [ebp-0x4], 0x1
+|      0x08048489     8b4508           mov eax, [ebp+0x8]
+|      0x0804848c     0fb600           movzx eax, byte [eax]
+|      0x0804848f     84c0             test al, al
+|  ,=< 0x08048491     7406             jz loc.08048499
+|  |   0x08048493     83450801         add dword [ebp+0x8], 0x1
+|  |   0x08048497     ebbf             jmp loc.08048458
+|  |   ; CODE (JMP) XREF 0x08048491 (sym.unhide)
+/ loc: loc.08048499 (4)
+|  |   0x08048499  loc.08048499:
+|  `-> 0x08048499     90               nop
+|      0x0804849a     90               nop
+|      0x0804849b     c9               leave
+\      0x0804849c     c3               ret
+       ; ------------
+```
+
+Let's run the binary to see if our findings are correct and if we can break the program.
+
+```
+root@kali:~# ./talisman 
+You have found a talisman.
+
+The talisman is cold to the touch, and has no words or symbols on it's surface.
+
+Do you want to wear the talisman?  a
+
+Nothing happens.
+root@kali:~# ./talisman 
+You have found a talisman.
+
+The talisman is cold to the touch, and has no words or symbols on it's surface.
+
+Do you want to wear the talisman?  AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+
+Nothing happens.
+Segmentation fault
+root@kali:~# dmesg 
+[15944.942943] talisman[9493]: segfault at 41414141 ip 41414141 sp bfd1d930 error 14
+```
+
+Our analysis was correct and we've found a buffer overflow. We've got to exploit the buffer overflow to execute the function named chantToBreakSpell. Let's breakout gdb and find out what registers we control and build an exploit.
+
+```
+root@kali:~# gdb -q talisman 
+Reading symbols from /root/talisman...(no debugging symbols found)...done.
+gdb-peda$ pattern_create 100 input
+Writing pattern of 100 chars to filename "input"
+gdb-peda$ r < input 
+warning: no loadable sections found in added symbol-file system-supplied DSO at 0xb7fe0000
+You have found a talisman.
+
+The talisman is cold to the touch, and has no words or symbols on it's surface.
+
+Do you want to wear the talisman?  
+Nothing happens.
+Program received signal SIGSEGV, Segmentation fault.
+ [----------------------------------registers-----------------------------------]
+EAX: 0xbffff47d --> 0xf2 
+EBX: 0xb7fbdff4 --> 0x160d7c 
+ECX: 0x8 
+EDX: 0xa13cf2 
+ESI: 0x0 
+EDI: 0x44414128 ('(AAD')
+EBP: 0x413b4141 ('AA;A')
+ESP: 0xbffff4f0 ("EAAaAA0AAFAAbAA1AAGAAcAA2AAHAAdAA3AAIAAeAA4AAJAAfAA5AAKAAgAA6AAL")
+EIP: 0x41412941 ('A)AA')
+EFLAGS: 0x10286 (carry PARITY adjust zero SIGN trap INTERRUPT direction overflow)
+[-------------------------------------code-------------------------------------]
+Invalid $PC address: 0x41412941
+[------------------------------------stack-------------------------------------]
+0000| 0xbffff4f0 ("EAAaAA0AAFAAbAA1AAGAAcAA2AAHAAdAA3AAIAAeAA4AAJAAfAA5AAKAAgAA6AAL")
+0004| 0xbffff4f4 ("AA0AAFAAbAA1AAGAAcAA2AAHAAdAA3AAIAAeAA4AAJAAfAA5AAKAAgAA6AAL")
+0008| 0xbffff4f8 ("AFAAbAA1AAGAAcAA2AAHAAdAA3AAIAAeAA4AAJAAfAA5AAKAAgAA6AAL")
+0012| 0xbffff4fc ("bAA1AAGAAcAA2AAHAAdAA3AAIAAeAA4AAJAAfAA5AAKAAgAA6AAL")
+0016| 0xbffff500 ("AAGAAcAA2AAHAAdAA3AAIAAeAA4AAJAAfAA5AAKAAgAA6AAL")
+0020| 0xbffff504 ("AcAA2AAHAAdAA3AAIAAeAA4AAJAAfAA5AAKAAgAA6AAL")
+0024| 0xbffff508 ("2AAHAAdAA3AAIAAeAA4AAJAAfAA5AAKAAgAA6AAL")
+0028| 0xbffff50c ("AAdAA3AAIAAeAA4AAJAAfAA5AAKAAgAA6AAL")
+[------------------------------------------------------------------------------]
+Legend: code, data, rodata, value
+Stopped reason: SIGSEGV
+0x41412941 in ?? ()
+gdb-peda$ pattern_search 
+Registers contain pattern buffer:
+EIP+0 found at offset: 32
+EDI+0 found at offset: 24
+EBP+0 found at offset: 28
+Registers point to pattern buffer:
+[ESP] --> offset 36 - size ~64
+Pattern buffer found at:
+0xb7fda000 : offset    0 - size  100 (mapped)
+0xbffff4cc : offset    0 - size  100 ($sp + -0x24 [-9 dwords])
+References to pattern buffer found at:
+0xb7fbe444 : 0xb7fda000 (/lib/i386-linux-gnu/i686/cmov/libc-2.13.so)
+0xb7fbe448 : 0xb7fda000 (/lib/i386-linux-gnu/i686/cmov/libc-2.13.so)
+0xb7fbe44c : 0xb7fda000 (/lib/i386-linux-gnu/i686/cmov/libc-2.13.so)
+0xb7fbe450 : 0xb7fda000 (/lib/i386-linux-gnu/i686/cmov/libc-2.13.so)
+0xb7fbe454 : 0xb7fda000 (/lib/i386-linux-gnu/i686/cmov/libc-2.13.so)
+0xb7fbe458 : 0xb7fda000 (/lib/i386-linux-gnu/i686/cmov/libc-2.13.so)
+0xb7fbe45c : 0xb7fda000 (/lib/i386-linux-gnu/i686/cmov/libc-2.13.so)
+0xbfffefb4 : 0xb7fda000 ($sp + -0x53c [-335 dwords])
+0xbffff04c : 0xb7fda000 ($sp + -0x4a4 [-297 dwords])
+0xbffff060 : 0xb7fda000 ($sp + -0x490 [-292 dwords])
+0xbffff2d4 : 0xbffff4cc ($sp + -0x21c [-135 dwords])
+0xbffff314 : 0xbffff4cc ($sp + -0x1dc [-119 dwords])
+0xbffff324 : 0xbffff4cc ($sp + -0x1cc [-115 dwords])
+gdb-peda$ quit
+root@kali:~# python -c 'print "\x37\x8a\x04\x08" * 9' | ./talisman
+You have found a talisman.
+
+The talisman is cold to the touch, and has no words or symbols on it's surface.
+
+Do you want to wear the talisman?  
+Nothing happens.
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+You fall to your knees.. weak and weary.
+Looking up you can see the spell is still protecting the cave entrance.
+The talisman is now almost too hot to touch!
+Turning it over you see words now etched into the surface:
+flag4{ea50536158db50247e110a6c89fcf3d3}
+Chant these words at u31337
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+Segmentation fault
+```
+
+The fourth flag is **flag4{ea50536158db50247e110a6c89fcf3d3}**
+As with flag 1 you've got to find the corresponding plaintext for the md5 hash ea50536158db50247e110a6c89fcf3d3 which ends up being blackmagic.
+
+```
+root@kali:~# echo flag4{ea50536158db50247e110a6c89fcf3d3} | nc -u 192.168.56.101 31337
+Chant is too long! Nothing happens.
+root@kali:~# echo blackmagic | nc -u 192.168.56.101 31337
+
+
+As you chant the words, a hissing sound echoes from the ice walls.
+
+The blue aura disappears from the cave entrance.
+
+You enter the cave and see that it is dimly lit by torches; shadows dancing against the rock wall as you descend deeper and deeper into the mountain.
+
+You hear high pitched screeches coming from within the cave, and you start to feel a gentle breeze.
+
+The screeches are getting closer, and with it the breeze begins to turn into an ice cold wind.
+
+Suddenly, you are attacked by a swarm of bats!
+
+You aimlessly thrash at the air in front of you!
+
+The bats continue their relentless attack, until.... silence.
+
+Looking around you see no sign of any bats, and no indication of the struggle which had just occurred.
+
+Looking towards one of the torches, you see something on the cave wall.
+
+You walk closer, and notice a pile of mutilated bats lying on the cave floor.  Above them, a word etched in blood on the wall.
+
+/thenecromancerwillabsorbyoursoul
+
+flag5{0766c36577af58e15545f099a3b15e60}
+```
+
+Sending the string blackmagic string to the server on port 31337 reveals the next flag and unlocked the next challenge.
+The fifth flag is **flag5{0766c36577af58e15545f099a3b15e60}**
+
+<img src="{{site.url}}/assets/necromancer-3.png">
+
+```
+root@kali:~# curl -O http://192.168.56.101/thenecromancerwillabsorbyoursoul/necromancer
+  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
+                                 Dload  Upload   Total   Spent    Left  Speed
+100 10355  100 10355    0     0  1520k      0 --:--:-- --:--:-- --:--:-- 2022k
+root@kali:~# file necromancer 
+necromancer: bzip2 compressed data, block size = 900k
+root@kali:~# mv necromancer necromancer.bz2
+root@kali:~# bunzip2 -d necromancer.bz2
+root@kali:~# file necromancer 
+necromancer: POSIX tar archive (GNU)
+root@kali:~# mv necromancer necromancer.tar
+root@kali:~# tar xvf necromancer.tar 
+necromancer.cap
+root@kali:~# file necromancer.cap 
+necromancer.cap: tcpdump capture file (little-endian) - version 2.4 (802.11, capture length 65535)
+```
