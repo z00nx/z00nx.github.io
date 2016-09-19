@@ -725,7 +725,7 @@ You walk closer, and notice a pile of mutilated bats lying on the cave floor.  A
 flag5{0766c36577af58e15545f099a3b15e60}
 ```
 
-Sending the string blackmagic string to the server on port 31337 reveals the next flag and unlocks the next challenge.
+Sending the string blackmagic to the server on port 31337 reveals the next flag and unlocks the next challenge.
 The fifth flag is **flag5{0766c36577af58e15545f099a3b15e60}**
 
 <img src="{{site.url}}/assets/necromancer-3.png">
@@ -749,7 +749,7 @@ necromancer.cap: tcpdump capture file (little-endian) - version 2.4 (802.11, cap
 ```
 
 With the next challenge there is a link to a file named necromancer as well as a reference to UDP 161.
-If we port scan the necromancer system again we see that UDP 161 is open. Running snmpwalk against the necromancer machine with a few common community string does not return results.
+If we port scan the necromancer system again we see that UDP 161 is open. Running snmpwalk against the necromancer machine with a few common community strings does not return any results.
 
 ```
 root@kali:~# unicornscan -mU -I 192.168.56.101:a;unicornscan -mT -I 192.168.56.101:a
@@ -786,7 +786,7 @@ root@kali:~# airodump-ng -r necromancer.cap
 ```
 
 Looking at the output from airodump we can see one client connected to a wireless network protected by WPA2.
-The solution to this challenge is likely we have to recover the WPA password which will be the SNMP community string.
+The solution to this challenge is likely that we have to recover the WPA password which will be the SNMP community string.
 
 ```
 root@kali:~# gunzip -d /usr/share/wordlists/rockyou.txt.gz 
@@ -845,6 +845,7 @@ iso.3.6.1.2.1.1.3.0 = Timeticks: (531103) 1:28:31.03
 iso.3.6.1.2.1.1.4.0 = STRING: "The door is Locked. If you choose to defeat me, the door must be Unlocked."
 iso.3.6.1.2.1.1.5.0 = STRING: "Fear the Necromancer!"
 iso.3.6.1.2.1.1.6.0 = STRING: "Locked - death2allrw!"
+---8<---
 ```
 
 I proceeded to use metasploit's snmp enumeration module to pull as much information as I can.
