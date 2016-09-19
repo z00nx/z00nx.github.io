@@ -10,14 +10,14 @@ In this post I'll be documenting my partial solution to the [Necromancer](https:
 Inital recon of the system shows that only one UDP port is open.
 
 ```
- Currently scanning: Finished!   |   Screen View: Unique Hosts                                                                                                                                                                               
-                                                                                                                                                                                                                                             
- 252 Captured ARP Req/Rep packets, from 3 hosts.   Total size: 15120                                                                                                                                                                         
+ Currently scanning: Finished!   |   Screen View: Unique Hosts
+
+ 252 Captured ARP Req/Rep packets, from 3 hosts.   Total size: 15120
  _____________________________________________________________________________
    IP            At MAC Address      Count  Len   MAC Vendor                   
  ----------------------------------------------------------------------------- 
 ---8<---
- 192.168.56.101  08:00:27:8b:12:f4    250    15000   CADMUS COMPUTER SYSTEMS                                                                                                                                                                 
+ 192.168.56.101  08:00:27:8b:12:f4    250    15000   CADMUS COMPUTER SYSTEMS
 ---8<---
 root@kali:~# unicornscan -mT -I 192.168.56.101:a;unicornscan -mU -I 192.168.56.101:a
 Main [Error   chld.c:53] am i missing children?, oh well
