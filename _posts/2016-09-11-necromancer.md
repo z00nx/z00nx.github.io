@@ -261,7 +261,7 @@ DECIMAL       HEXADECIMAL     DESCRIPTION
 37267         0x9193          End of Zip archive
 ```
 
-Inside the zip file is a text file which contains a base64 encoded string. Decoding the string reveals the next flag which is **flag3{9ad3f62db7b91c28b68137000394639f}** and the next challenge.
+Inside the zip file is a text file which contains a base64 encoded string. Decoding the string reveals the third flag which is **flag3{9ad3f62db7b91c28b68137000394639f}** and the next challenge.
 
 ```
 root@kali:~# cat _pileoffeathers.jpg.extracted/feathers.txt 
@@ -725,7 +725,7 @@ You walk closer, and notice a pile of mutilated bats lying on the cave floor.  A
 flag5{0766c36577af58e15545f099a3b15e60}
 ```
 
-Sending the string blackmagic to the server on port 31337 reveals the next flag and unlocks the next challenge.
+Sending the string blackmagic to the server on port 31337 reveals the fifth flag and unlocks the next challenge.
 The fifth flag is **flag5{0766c36577af58e15545f099a3b15e60}**
 
 <img src="{{site.url}}/assets/necromancer-3.png">
