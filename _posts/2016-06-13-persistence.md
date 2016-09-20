@@ -44,7 +44,7 @@ root@kali:~# nikto -h 192.168.2.105 -C all
 ---------------------------------------------------------------------------
 + 1 host(s) tested
 {% endhighlight %}
-Browsing to the page we find a web page which allows us to ping an inputted IP address. <img src="{{site.url}}/assets/debug_php.png">
+Browsing to the page we find a web page which allows us to ping an inputted IP address. <img src="{{site.url}}/assets/persistence-1.png">
 I was able to verify that the ping command was working by running a packet capture when I submitted my query
 {% highlight console %}
 root@kali:~# tcpdump -i eth0 'icmp'
