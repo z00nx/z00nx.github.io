@@ -5,7 +5,7 @@ description: "Necromancer boot2root writeup"
 category: writeups
 tags: [boot2root, vulnhub]
 ---
-In this post I'll be documenting my partial solution to the [Necromancer](https://www.vulnhub.com/entry/the-necromancer-1,154/) boot2root created by [@xerubus](https://twitter.com/xerubus).
+In this post I'll be documenting my complete solution to the [Necromancer](https://www.vulnhub.com/entry/the-necromancer-1,154/) boot2root created by [@xerubus](https://twitter.com/xerubus).
 
 Inital recon of the system shows that only one UDP port is open.
 
